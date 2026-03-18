@@ -1,0 +1,320 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PROJECT_MANAGER
+  FIELD_SUPERVISOR
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  APPROVED
+  REJECTED
+}
+
+enum FieldType {
+  SHORT_TEXT
+  LONG_TEXT
+  NUMBER
+  DATE
+  TIME
+  DATETIME
+  SINGLE_SELECT
+  MULTI_SELECT
+  DROPDOWN
+  RADIO
+  CHECKBOX_LIST
+  YES_NO
+  RATING
+  FILE_UPLOAD
+  IMAGE_UPLOAD
+  MULTIPLE_IMAGES
+  SIGNATURE
+  GPS_LOCATION
+  HIDDEN
+  CALCULATED
+  READONLY_INFO
+  SECTION_HEADER
+  REPEATER_GROUP
+  CHECKLIST_BLOCK
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(VIEWER)
+  isActive      Boolean   @default(true)
+  phone         String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  projectAccess  UserProjectAccess[]
+  submissions    Submission[]
+  activityLogs   ActivityLog[]
+  createdProjects Project[] @relation("ProjectCreator")
+
+  @@map("users")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  clientName  String
+  projectCode String        @unique
+  city        String?
+  location    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      ProjectStatus @default(ACTIVE)
+  description String?       @db.Text
+  notes       String?       @db.Text
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  createdBy      User                @relation("ProjectCreator", fields: [createdById], references: [id])
+  members        UserProjectAccess[]
+  formTemplates  FormTemplate[]
+  submissions    Submission[]
+  activityLogs   ActivityLog[]
+
+  @@map("projects")
+}
+
+model UserProjectAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("user_project_access")
+}
+
+model FormTemplate {
+  id          String     @id @default(cuid())
+  projectId   String
+  name        String
+  nameEn      String?
+  description String?    @db.Text
+  type        String     @default("custom")
+  status      FormStatus @default(DRAFT)
+  version     Int        @default(1)
+  isDefault   Boolean    @default(false)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions    FormTemplateVersion[]
+  sections    FormSection[]
+  submissions Submission[]
+
+  @@map("form_templates")
+}
+
+model FormTemplateVersion {
+  id             String   @id @default(cuid())
+  formTemplateId String
+  version        Int
+  snapshot       Json
+  createdAt      DateTime @default(now())
+
+  formTemplate FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+
+  @@map("form_template_versions")
+}
+
+model FormSection {
+  id             String @id @default(cuid())
+  formTemplateId String
+  title          String
+  titleEn        String?
+  description    String? @db.Text
+  sortOrder      Int     @default(0)
+  isRepeatable   Boolean @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  formTemplate FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+  fields       FormField[]
+
+  @@map("form_sections")
+}
+
+model FormField {
+  id            String    @id @default(cuid())
+  sectionId     String
+  label         String
+  labelEn       String?
+  fieldType     FieldType
+  isRequired    Boolean   @default(false)
+  placeholder   String?
+  helpText      String?
+  defaultValue  String?
+  validation    Json?
+  sortOrder     Int       @default(0)
+  settings      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  section        FormSection       @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  options        FormFieldOption[]
+  logicRules     FormLogicRule[]   @relation("SourceField")
+  targetRules    FormLogicRule[]   @relation("TargetField")
+  answers        SubmissionAnswer[]
+
+  @@map("form_fields")
+}
+
+model FormFieldOption {
+  id       String @id @default(cuid())
+  fieldId  String
+  label    String
+  labelEn  String?
+  value    String
+  sortOrder Int   @default(0)
+
+  field FormField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@map("form_field_options")
+}
+
+model FormLogicRule {
+  id            String @id @default(cuid())
+  sourceFieldId String
+  targetFieldId String
+  condition     String
+  conditionValue String?
+  action        String
+
+  sourceField FormField @relation("SourceField", fields: [sourceFieldId], references: [id], onDelete: Cascade)
+  targetField FormField @relation("TargetField", fields: [targetFieldId], references: [id], onDelete: Cascade)
+
+  @@map("form_logic_rules")
+}
+
+model Submission {
+  id             String           @id @default(cuid())
+  formTemplateId String
+  projectId      String
+  submittedById  String
+  status         SubmissionStatus @default(DRAFT)
+  reviewNotes    String?          @db.Text
+  reviewedById   String?
+  reviewedAt     DateTime?
+  submittedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  formTemplate FormTemplate       @relation(fields: [formTemplateId], references: [id])
+  project      Project            @relation(fields: [projectId], references: [id])
+  submittedBy  User               @relation(fields: [submittedById], references: [id])
+  answers      SubmissionAnswer[]
+  files        SubmissionFile[]
+  location     SubmissionLocation?
+
+  @@map("submissions")
+}
+
+model SubmissionAnswer {
+  id           String  @id @default(cuid())
+  submissionId String
+  fieldId      String
+  value        String? @db.LongText
+  createdAt    DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  field      FormField  @relation(fields: [fieldId], references: [id])
+
+  @@map("submission_answers")
+}
+
+model SubmissionFile {
+  id           String @id @default(cuid())
+  submissionId String
+  fieldLabel   String?
+  fileName     String
+  fileUrl      String
+  fileType     String
+  fileSize     Int
+  stage        String?
+  createdAt    DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("submission_files")
+}
+
+model SubmissionLocation {
+  id           String  @id @default(cuid())
+  submissionId String  @unique
+  latitude     Float
+  longitude    Float
+  accuracy     Float?
+  address      String?
+  capturedAt   DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("submission_locations")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  projectId String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
