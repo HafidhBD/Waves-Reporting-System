@@ -5,7 +5,7 @@
   "description": "منصة ويفز للتقارير - Waves Reporting Platform",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "prisma generate && next build",
     "start": "node server.js",
     "lint": "next lint",
     "postinstall": "prisma generate",
