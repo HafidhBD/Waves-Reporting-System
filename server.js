@@ -1,10 +1,23 @@
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
+const { execSync } = require('child_process');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = parseInt(process.env.PORT, 10) || 3000;
+
+// Run prisma db push on startup
+try {
+  console.log('> Running prisma db push...');
+  execSync('npx prisma db push --accept-data-loss', { 
+    stdio: 'inherit',
+    timeout: 30000 
+  });
+  console.log('> Database tables created successfully');
+} catch (err) {
+  console.log('> Warning: prisma db push failed (tables may already exist):', err.message);
+}
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
