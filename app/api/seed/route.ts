@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hash } from 'bcryptjs';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Check if already seeded

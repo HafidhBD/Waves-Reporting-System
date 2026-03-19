@@ -2,19 +2,23 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hash } from 'bcryptjs';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Delete all data in correct order (respecting foreign keys)
-    await prisma.answer.deleteMany();
-    await prisma.fileAttachment.deleteMany();
+    await prisma.submissionAnswer.deleteMany();
+    await prisma.submissionFile.deleteMany();
     await prisma.submissionLocation.deleteMany();
     await prisma.submission.deleteMany();
-    await prisma.fieldOption.deleteMany();
+    await prisma.formFieldOption.deleteMany();
+    await prisma.formLogicRule.deleteMany();
     await prisma.formField.deleteMany();
     await prisma.formSection.deleteMany();
+    await prisma.formTemplateVersion.deleteMany();
     await prisma.formTemplate.deleteMany();
     await prisma.activityLog.deleteMany();
-    await prisma.projectMember.deleteMany();
+    await prisma.userProjectAccess.deleteMany();
     await prisma.project.deleteMany();
     await prisma.setting.deleteMany();
     await prisma.user.deleteMany();
