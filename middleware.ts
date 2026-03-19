@@ -6,8 +6,15 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Role-based route protection
-    if (path.startsWith('/dashboard/users') || path.startsWith('/dashboard/settings')) {
+    // Settings: SUPER_ADMIN only
+    if (path.startsWith('/dashboard/settings')) {
+      if (token?.role !== 'SUPER_ADMIN') {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+    }
+
+    // Users: SUPER_ADMIN and ADMIN
+    if (path.startsWith('/dashboard/users')) {
       if (token?.role !== 'SUPER_ADMIN' && token?.role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }

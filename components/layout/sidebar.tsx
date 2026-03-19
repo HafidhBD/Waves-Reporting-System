@@ -27,7 +27,7 @@ const navigation = [
   { name: 'التقارير', href: '/dashboard/submissions', icon: ClipboardList },
   { name: 'المستخدمون', href: '/dashboard/users', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { name: 'التحليلات', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'الإعدادات', href: '/dashboard/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { name: 'الإعدادات', href: '/dashboard/settings', icon: Settings, roles: ['SUPER_ADMIN'] },
 ];
 
 export function Sidebar() {

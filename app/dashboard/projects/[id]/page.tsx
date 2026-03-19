@@ -129,9 +129,14 @@ export default function ProjectDetailPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-lg font-bold text-gray-900">{form._count?.submissions || 0}</p>
-                      <p className="text-xs text-gray-400">تقرير</p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-left">
+                        <p className="text-lg font-bold text-gray-900">{form._count?.submissions || 0}</p>
+                        <p className="text-xs text-gray-400">تقرير</p>
+                      </div>
+                      <Link href={`/dashboard/projects/${project.id}/submit/${form.id}`}>
+                        <Button size="sm" className="bg-waves-600 hover:bg-waves-700">تقديم تقرير</Button>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>

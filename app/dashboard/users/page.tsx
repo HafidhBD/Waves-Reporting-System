@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { getRoleLabel, formatDateTime } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Plus, Search, Users, Loader2, Mail, Phone, Shield, Calendar,
+  Plus, Search, Loader2, Mail, Phone, Calendar, Pencil, Trash2, UserX, UserCheck,
 } from 'lucide-react';
 
 interface User {
@@ -27,15 +27,25 @@ interface User {
 }
 
 export default function UsersPage() {
+  const { data: session } = useSession();
+  const currentRole = (session?.user as any)?.role;
+  const isSuperAdmin = currentRole === 'SUPER_ADMIN';
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', role: 'VIEWER', phone: '',
+  });
+
+  const [editForm, setEditForm] = useState({
+    name: '', email: '', role: '', phone: '', password: '', isActive: true,
   });
 
   const fetchUsers = async () => {
@@ -80,6 +90,84 @@ export default function UsersPage() {
       toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEdit = (user: User) => {
+    setEditUser(user);
+    setEditForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || '',
+      password: '',
+      isActive: user.isActive,
+    });
+    setShowEdit(true);
+  };
+
+  const handleEdit = async () => {
+    if (!editUser) return;
+    setSaving(true);
+    try {
+      const data: any = {
+        name: editForm.name,
+        email: editForm.email,
+        role: editForm.role,
+        phone: editForm.phone,
+        isActive: editForm.isActive,
+      };
+      if (editForm.password) data.password = editForm.password;
+
+      const res = await fetch(`/api/users/${editUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        toast({ title: 'تم بنجاح', description: 'تم تحديث المستخدم بنجاح' });
+        setShowEdit(false);
+        fetchUsers();
+      } else {
+        const err = await res.json();
+        toast({ title: 'خطأ', description: err.error, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (user: User) => {
+    if (!confirm(`هل أنت متأكد من حذف المستخدم "${user.name}"؟`)) return;
+    try {
+      const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'تم بنجاح', description: 'تم حذف المستخدم' });
+        fetchUsers();
+      } else {
+        const err = await res.json();
+        toast({ title: 'خطأ', description: err.error, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ', variant: 'destructive' });
+    }
+  };
+
+  const handleToggleActive = async (user: User) => {
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !user.isActive }),
+      });
+      if (res.ok) {
+        toast({ title: 'تم', description: user.isActive ? 'تم تعطيل الحساب' : 'تم تفعيل الحساب' });
+        fetchUsers();
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ', variant: 'destructive' });
     }
   };
 
@@ -152,9 +240,25 @@ export default function UsersPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 mt-3 pt-3 border-t text-xs text-gray-400">
-                  <span>{user._count.projectAccess} مشاريع</span>
-                  <span>{user._count.submissions} تقارير</span>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                  <div className="text-xs text-gray-400">
+                    <span>{user._count.projectAccess} مشاريع</span>
+                    <span className="mx-2">•</span>
+                    <span>{user._count.submissions} تقارير</span>
+                  </div>
+                  {isSuperAdmin && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleToggleActive(user)} className={`p-1.5 rounded-md transition-colors ${user.isActive ? 'hover:bg-amber-50 text-amber-500' : 'hover:bg-emerald-50 text-emerald-500'}`} title={user.isActive ? 'تعطيل' : 'تفعيل'}>
+                        {user.isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => openEdit(user)} className="p-1.5 rounded-md hover:bg-blue-50 text-blue-500 transition-colors" title="تعديل">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(user)} className="p-1.5 rounded-md hover:bg-red-50 text-red-500 transition-colors" title="حذف">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -162,6 +266,7 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -185,7 +290,6 @@ export default function UsersPage() {
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SUPER_ADMIN">مدير النظام</SelectItem>
                   <SelectItem value="ADMIN">مدير</SelectItem>
                   <SelectItem value="PROJECT_MANAGER">مدير مشروع</SelectItem>
                   <SelectItem value="FIELD_SUPERVISOR">مشرف ميداني</SelectItem>
@@ -203,6 +307,57 @@ export default function UsersPage() {
             <Button onClick={handleCreate} disabled={creating} className="bg-waves-600 hover:bg-waves-700">
               {creating ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
               إضافة المستخدم
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تعديل المستخدم</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>الاسم الكامل</Label>
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>البريد الإلكتروني</Label>
+              <Input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <Label>كلمة مرور جديدة (اتركها فارغة للإبقاء)</Label>
+              <Input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} placeholder="كلمة مرور جديدة" dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <Label>الدور</Label>
+              <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SUPER_ADMIN">مدير النظام</SelectItem>
+                  <SelectItem value="ADMIN">مدير</SelectItem>
+                  <SelectItem value="PROJECT_MANAGER">مدير مشروع</SelectItem>
+                  <SelectItem value="FIELD_SUPERVISOR">مشرف ميداني</SelectItem>
+                  <SelectItem value="VIEWER">مشاهد</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>رقم الهاتف</Label>
+              <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} dir="ltr" />
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })} className="w-4 h-4 rounded" />
+              <Label>الحساب نشط</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEdit(false)}>إلغاء</Button>
+            <Button onClick={handleEdit} disabled={saving} className="bg-waves-600 hover:bg-waves-700">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+              حفظ التعديلات
             </Button>
           </DialogFooter>
         </DialogContent>
