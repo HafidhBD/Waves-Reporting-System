@@ -199,11 +199,7 @@ export default function SubmitFormPage() {
           </div>
         );
       case 'SIGNATURE':
-        return (
-          <div className="border-2 border-dashed rounded-lg p-8 text-center bg-gray-50">
-            <p className="text-sm text-gray-500">منطقة التوقيع - اضغط للتوقيع</p>
-          </div>
-        );
+        return null;
       case 'SECTION_HEADER':
         return null;
       case 'READONLY_INFO':

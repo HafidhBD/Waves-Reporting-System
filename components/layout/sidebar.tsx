@@ -48,7 +48,7 @@ export function Sidebar() {
           <Menu className="w-6 h-6" />
         </button>
         <div className="flex items-center gap-2">
-          <Waves className="w-6 h-6 text-waves-600" />
+          <img src="/logo.gif" alt="ويفز" className="h-8 w-auto" />
           <span className="font-bold text-waves-900">ويفز</span>
         </div>
         <div className="w-10" />
@@ -70,9 +70,7 @@ export function Sidebar() {
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-6 border-b">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-waves-600 flex items-center justify-center">
-                <Waves className="w-5 h-5 text-white" />
-              </div>
+              <img src="/logo.gif" alt="ويفز" className="h-9 w-auto" />
               <div>
                 <h1 className="font-bold text-sm text-gray-900">منصة ويفز</h1>
                 <p className="text-[10px] text-gray-400">Waves Reporting</p>

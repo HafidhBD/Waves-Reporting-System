@@ -46,9 +46,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-waves-50 via-white to-waves-100 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-waves-600 text-white mb-4 shadow-lg">
-            <Waves className="w-8 h-8" />
-          </div>
+          <img src="/logo.gif" alt="ويفز" className="h-20 w-auto mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900">منصة ويفز للتقارير</h1>
           <p className="text-gray-500 mt-2">Waves Reporting Platform</p>
         </div>

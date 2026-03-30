@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, ClipboardList, Loader2, FileText, MapPin, Eye,
-  CheckCircle, XCircle, Clock,
+  CheckCircle, XCircle, Clock, X, ZoomIn, Filter,
 } from 'lucide-react';
 
 interface Submission {
@@ -41,6 +41,9 @@ export default function SubmissionsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [personFilter, setPersonFilter] = useState('ALL');
+  const [formFilter, setFormFilter] = useState('ALL');
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchSubmissions = async () => {
@@ -58,12 +61,19 @@ export default function SubmissionsPage() {
 
   useEffect(() => { fetchSubmissions(); }, [statusFilter]);
 
-  const filtered = submissions.filter((s) =>
-    s.formTemplate.name.includes(search) ||
-    s.project.name.includes(search) ||
-    s.submittedBy.name.includes(search) ||
-    s.project.clientName.includes(search)
-  );
+  // Unique persons and forms for filters
+  const uniquePersons = Array.from(new Map(submissions.map(s => [s.submittedBy.id, s.submittedBy])).values());
+  const uniqueForms = Array.from(new Map(submissions.map(s => [s.formTemplate.id, s.formTemplate])).values());
+
+  const filtered = submissions.filter((s) => {
+    const matchSearch = s.formTemplate.name.includes(search) ||
+      s.project.name.includes(search) ||
+      s.submittedBy.name.includes(search) ||
+      s.project.clientName.includes(search);
+    const matchPerson = personFilter === 'ALL' || s.submittedBy.id === personFilter;
+    const matchForm = formFilter === 'ALL' || s.formTemplate.id === formFilter;
+    return matchSearch && matchPerson && matchForm;
+  });
 
   const openDetail = async (sub: Submission) => {
     setShowDetail(true);
@@ -128,6 +138,31 @@ export default function SubmissionsPage() {
             <SelectItem value="REVIEWED">تمت المراجعة</SelectItem>
             <SelectItem value="APPROVED">معتمد</SelectItem>
             <SelectItem value="REJECTED">مرفوض</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Select value={personFilter} onValueChange={setPersonFilter}>
+          <SelectTrigger className="w-full sm:w-56 h-11">
+            <SelectValue placeholder="فرز حسب الشخص" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع الأشخاص</SelectItem>
+            {uniquePersons.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={formFilter} onValueChange={setFormFilter}>
+          <SelectTrigger className="w-full sm:w-56 h-11">
+            <SelectValue placeholder="فرز حسب الاستمارة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع الاستمارات</SelectItem>
+            {uniqueForms.map((f) => (
+              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -218,15 +253,61 @@ export default function SubmissionsPage() {
                   {section.fields?.map((field: any) => {
                     const answer = selectedSub.answers?.find((a: any) => a.fieldId === field.id);
                     if (!answer && field.fieldType === 'SECTION_HEADER') return null;
+                    const isImage = field.fieldType === 'IMAGE_UPLOAD' || field.fieldType === 'MULTIPLE_IMAGES';
                     return (
                       <div key={field.id} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 text-sm">
                         <span className="text-gray-500 sm:w-1/3 shrink-0">{field.label}</span>
-                        <span className="font-medium text-gray-900 sm:w-2/3">{answer?.value || <span className="text-gray-300">-</span>}</span>
+                        <span className="font-medium text-gray-900 sm:w-2/3">
+                          {isImage && answer?.value ? (
+                            <div className="flex flex-wrap gap-2">
+                              {answer.value.split(',').map((img: string, idx: number) => {
+                                const src = img.trim().startsWith('/') ? img.trim() : `/uploads/${img.trim()}`;
+                                return (
+                                  <div key={idx} className="relative group cursor-pointer" onClick={() => setLightboxImg(src)}>
+                                    <img src={src} alt={field.label} className="w-20 h-20 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-lg">
+                                      <ZoomIn className="w-5 h-5 text-white" />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : field.fieldType === 'YES_NO' && answer?.value ? (
+                            answer.value === 'yes' ? <span className="text-emerald-600">نعم ✓</span> :
+                            answer.value === 'no' ? <span className="text-red-600">لا ✗</span> :
+                            <span className="text-gray-400">غ/م</span>
+                          ) : answer?.value || <span className="text-gray-300">-</span>}
+                        </span>
                       </div>
                     );
                   })}
                 </div>
               ))}
+
+              {/* Attached Files */}
+              {selectedSub.files && selectedSub.files.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-800 border-b pb-2">المرفقات ({selectedSub.files.length})</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSub.files.map((file: any) => {
+                      const isImg = file.fileType?.startsWith('image/');
+                      const src = file.fileUrl || `/uploads/${file.fileName}`;
+                      return isImg ? (
+                        <div key={file.id} className="relative group cursor-pointer" onClick={() => setLightboxImg(src)}>
+                          <img src={src} alt={file.fileName} className="w-20 h-20 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-lg">
+                            <ZoomIn className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <a key={file.id} href={src} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-gray-50 border rounded-lg text-sm text-gray-700 hover:bg-gray-100">
+                          <FileText className="w-4 h-4" />{file.fileName}
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Review Section */}
               {canReview && selectedSub.status !== 'APPROVED' && selectedSub.status !== 'DRAFT' && (
@@ -264,6 +345,16 @@ export default function SubmissionsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Image Lightbox */}
+      {lightboxImg && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4" onClick={() => setLightboxImg(null)}>
+          <button className="absolute top-4 left-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 z-10" onClick={() => setLightboxImg(null)}>
+            <X className="w-6 h-6" />
+          </button>
+          <img src={lightboxImg} alt="صورة" className="max-w-full max-h-[90vh] object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }
