@@ -105,6 +105,73 @@ export async function GET() {
       { sectionId: instS4.id, label: 'الموقع الجغرافي', labelEn: 'GPS Location', fieldType: 'GPS_LOCATION', isRequired: false, sortOrder: 3 },
     ]});
 
+    // ===== Field Activation Report =====
+    const actS1 = await prisma.formSection.create({ data: { formTemplateId: activationForm.id, title: 'المعلومات العامة', titleEn: 'General Info', sortOrder: 1 } });
+    await prisma.formField.createMany({ data: [
+      { sectionId: actS1.id, label: 'اسم المشروع', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 1 },
+      { sectionId: actS1.id, label: 'اسم العميل', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 2 },
+      { sectionId: actS1.id, label: 'اسم الفعالية', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 3 },
+      { sectionId: actS1.id, label: 'التاريخ', fieldType: 'DATE', isRequired: true, sortOrder: 4 },
+      { sectionId: actS1.id, label: 'وقت البداية', fieldType: 'TIME', isRequired: true, sortOrder: 5 },
+      { sectionId: actS1.id, label: 'وقت النهاية', fieldType: 'TIME', isRequired: false, sortOrder: 6 },
+      { sectionId: actS1.id, label: 'الموقع', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 7 },
+      { sectionId: actS1.id, label: 'المشرف الميداني', fieldType: 'SHORT_TEXT', isRequired: false, sortOrder: 8 },
+      { sectionId: actS1.id, label: 'عدد فريق العمل', fieldType: 'NUMBER', isRequired: false, sortOrder: 9 },
+    ]});
+
+    const actS2 = await prisma.formSection.create({ data: { formTemplateId: activationForm.id, title: 'فحص ما قبل التفعيل', titleEn: 'Pre-Activation Check', sortOrder: 2 } });
+    const actChecklist1 = ['تم فحص جميع التوصيلات الكهربائية','الشاشات تعمل بشكل صحيح','الإضاءة مكتملة وتعمل','الصوتيات تعمل بشكل سليم','اللافتات والبنرات مثبتة بشكل صحيح','تم اختبار شبكة الإنترنت','أجهزة الاستقبال جاهزة','تم التأكد من نظام التكييف','المنصات والطاولات جاهزة','تم تنظيف الموقع بالكامل'];
+    await prisma.formField.createMany({ data: actChecklist1.map((item, i) => ({ sectionId: actS2.id, label: item, fieldType: 'YES_NO' as const, isRequired: false, sortOrder: i + 1 })) });
+
+    const actS3 = await prisma.formSection.create({ data: { formTemplateId: activationForm.id, title: 'التوثيق المصور', titleEn: 'Photo Documentation', sortOrder: 3 } });
+    await prisma.formField.createMany({ data: [
+      { sectionId: actS3.id, label: 'صور الموقع قبل التفعيل', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 1 },
+      { sectionId: actS3.id, label: 'صور أثناء التفعيل', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 2 },
+      { sectionId: actS3.id, label: 'صور بعد التفعيل', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 3 },
+    ]});
+
+    const actS4 = await prisma.formSection.create({ data: { formTemplateId: activationForm.id, title: 'الملاحظات والتوقيع', titleEn: 'Notes & Signature', sortOrder: 4 } });
+    await prisma.formField.createMany({ data: [
+      { sectionId: actS4.id, label: 'المشاكل أو الملاحظات', fieldType: 'LONG_TEXT', isRequired: false, sortOrder: 1 },
+      { sectionId: actS4.id, label: 'التقييم العام', fieldType: 'RATING', isRequired: false, sortOrder: 2 },
+      { sectionId: actS4.id, label: 'التوقيع', fieldType: 'SIGNATURE', isRequired: false, sortOrder: 3 },
+      { sectionId: actS4.id, label: 'الموقع الجغرافي', fieldType: 'GPS_LOCATION', isRequired: false, sortOrder: 4 },
+    ]});
+
+    // ===== Dismantling / Removal Report =====
+    const disS1 = await prisma.formSection.create({ data: { formTemplateId: dismantlingForm.id, title: 'المعلومات العامة', titleEn: 'General Info', sortOrder: 1 } });
+    await prisma.formField.createMany({ data: [
+      { sectionId: disS1.id, label: 'اسم المشروع', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 1 },
+      { sectionId: disS1.id, label: 'اسم العميل', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 2 },
+      { sectionId: disS1.id, label: 'التاريخ', fieldType: 'DATE', isRequired: true, sortOrder: 3 },
+      { sectionId: disS1.id, label: 'وقت البداية', fieldType: 'TIME', isRequired: true, sortOrder: 4 },
+      { sectionId: disS1.id, label: 'وقت النهاية', fieldType: 'TIME', isRequired: false, sortOrder: 5 },
+      { sectionId: disS1.id, label: 'الموقع', fieldType: 'SHORT_TEXT', isRequired: true, sortOrder: 6 },
+      { sectionId: disS1.id, label: 'المشرف الميداني', fieldType: 'SHORT_TEXT', isRequired: false, sortOrder: 7 },
+      { sectionId: disS1.id, label: 'عدد فريق العمل', fieldType: 'NUMBER', isRequired: false, sortOrder: 8 },
+      { sectionId: disS1.id, label: 'عدد الشاحنات / المركبات', fieldType: 'NUMBER', isRequired: false, sortOrder: 9 },
+    ]});
+
+    const disS2 = await prisma.formSection.create({ data: { formTemplateId: dismantlingForm.id, title: 'قائمة تحقق الإزالة', titleEn: 'Removal Checklist', sortOrder: 2 } });
+    const disChecklist = ['تم فصل الكهرباء بالكامل','تم فك اللافتات والبنرات','تم فك المنصات والطاولات','تم فك الشاشات والأجهزة','تم تفكيك الهياكل المعدنية','تم جمع جميع المواد','تم فحص المواد وتصنيفها','لا يوجد ضرر في الموقع','تم تنظيف الموقع بالكامل','تم تسليم الموقع لصاحبه','تم تحميل جميع المواد على الشاحنات','ارتدى الفريق معدات السلامة'];
+    await prisma.formField.createMany({ data: disChecklist.map((item, i) => ({ sectionId: disS2.id, label: item, fieldType: 'YES_NO' as const, isRequired: false, sortOrder: i + 1 })) });
+
+    const disS3 = await prisma.formSection.create({ data: { formTemplateId: dismantlingForm.id, title: 'التوثيق المصور', titleEn: 'Photo Documentation', sortOrder: 3 } });
+    await prisma.formField.createMany({ data: [
+      { sectionId: disS3.id, label: 'صور قبل الإزالة', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 1 },
+      { sectionId: disS3.id, label: 'صور أثناء الإزالة', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 2 },
+      { sectionId: disS3.id, label: 'صور بعد الإزالة والتنظيف', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 3 },
+      { sectionId: disS3.id, label: 'صور حالة المواد المسترجعة', fieldType: 'MULTIPLE_IMAGES', isRequired: false, sortOrder: 4 },
+    ]});
+
+    const disS4 = await prisma.formSection.create({ data: { formTemplateId: dismantlingForm.id, title: 'الملاحظات والتوقيع', titleEn: 'Notes & Signature', sortOrder: 4 } });
+    await prisma.formField.createMany({ data: [
+      { sectionId: disS4.id, label: 'قائمة المواد التالفة', fieldType: 'LONG_TEXT', isRequired: false, sortOrder: 1 },
+      { sectionId: disS4.id, label: 'ملاحظات المشرف', fieldType: 'LONG_TEXT', isRequired: false, sortOrder: 2 },
+      { sectionId: disS4.id, label: 'التوقيع', fieldType: 'SIGNATURE', isRequired: false, sortOrder: 3 },
+      { sectionId: disS4.id, label: 'الموقع الجغرافي', fieldType: 'GPS_LOCATION', isRequired: false, sortOrder: 4 },
+    ]});
+
     // Settings
     await prisma.setting.create({
       data: { key: 'company', value: { name: 'منصة ويفز للتقارير', nameEn: 'Waves Reporting Platform', primaryColor: '#2573eb' } },

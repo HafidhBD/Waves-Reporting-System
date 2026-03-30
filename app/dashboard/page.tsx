@@ -23,6 +23,14 @@ interface DashboardData {
     pendingReview: number;
     totalUsers: number;
     activeUsers: number;
+    weekSubmissions: number;
+  };
+  statusBreakdown: {
+    draft: number;
+    submitted: number;
+    reviewed: number;
+    approved: number;
+    rejected: number;
   };
   recentSubmissions: Array<{
     id: string;
@@ -101,6 +109,41 @@ export default function DashboardPage() {
               </Card>
             ))}
           </div>
+
+          {/* Status Breakdown */}
+          {data?.statusBreakdown && data.stats.totalSubmissions > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">توزيع حالات التقارير</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[
+                    { label: 'معتمد', count: data.statusBreakdown.approved, color: 'bg-emerald-500', textColor: 'text-emerald-700' },
+                    { label: 'تمت المراجعة', count: data.statusBreakdown.reviewed, color: 'bg-purple-500', textColor: 'text-purple-700' },
+                    { label: 'مُرسل (بانتظار المراجعة)', count: data.statusBreakdown.submitted, color: 'bg-amber-500', textColor: 'text-amber-700' },
+                    { label: 'مسودة', count: data.statusBreakdown.draft, color: 'bg-gray-400', textColor: 'text-gray-600' },
+                    { label: 'مرفوض', count: data.statusBreakdown.rejected, color: 'bg-red-500', textColor: 'text-red-700' },
+                  ].map((item) => {
+                    const pct = data.stats.totalSubmissions > 0 ? Math.round((item.count / data.stats.totalSubmissions) * 100) : 0;
+                    return (
+                      <div key={item.label} className="flex items-center gap-3">
+                        <span className={`text-sm w-40 shrink-0 ${item.textColor}`}>{item.label}</span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                          <div className={`h-full ${item.color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-sm font-bold text-gray-700 w-16 text-left">{item.count} ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 pt-3 border-t flex items-center justify-between text-sm text-gray-500">
+                  <span>إجمالي التقارير: <strong className="text-gray-900">{data.stats.totalSubmissions}</strong></span>
+                  <span>هذا الأسبوع: <strong className="text-gray-900">{data.stats.weekSubmissions}</strong></span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

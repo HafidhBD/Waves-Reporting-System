@@ -21,15 +21,24 @@ export async function GET() {
       totalSubmissions,
       todaySubmissions,
       pendingReview,
+      approvedCount,
+      rejectedCount,
+      reviewedCount,
+      draftCount,
       totalUsers,
       activeUsers,
       recentSubmissions,
+      weekSubmissions,
     ] = await Promise.all([
       prisma.project.count({ where: { status: 'ACTIVE' } }),
       prisma.project.count(),
       prisma.submission.count(),
       prisma.submission.count({ where: { createdAt: { gte: today } } }),
       prisma.submission.count({ where: { status: 'SUBMITTED' } }),
+      prisma.submission.count({ where: { status: 'APPROVED' } }),
+      prisma.submission.count({ where: { status: 'REJECTED' } }),
+      prisma.submission.count({ where: { status: 'REVIEWED' } }),
+      prisma.submission.count({ where: { status: 'DRAFT' } }),
       prisma.user.count(),
       prisma.user.count({ where: { isActive: true } }),
       prisma.submission.findMany({
@@ -41,6 +50,7 @@ export async function GET() {
           submittedBy: { select: { name: true } },
         },
       }),
+      prisma.submission.count({ where: { createdAt: { gte: weekAgo } } }),
     ]);
 
     return NextResponse.json({
@@ -52,6 +62,14 @@ export async function GET() {
         pendingReview,
         totalUsers,
         activeUsers,
+        weekSubmissions,
+      },
+      statusBreakdown: {
+        draft: draftCount,
+        submitted: pendingReview,
+        reviewed: reviewedCount,
+        approved: approvedCount,
+        rejected: rejectedCount,
       },
       recentSubmissions,
     });

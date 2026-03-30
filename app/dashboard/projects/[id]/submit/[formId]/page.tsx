@@ -182,10 +182,20 @@ export default function SubmitFormPage() {
       case 'IMAGE_UPLOAD':
       case 'MULTIPLE_IMAGES':
         return (
-          <div className="border-2 border-dashed rounded-lg p-6 text-center">
-            <Camera className="w-8 h-8 mx-auto text-gray-300 mb-2" />
-            <p className="text-sm text-gray-500">اضغط لالتقاط صورة أو اختيار من المعرض</p>
-            <input type="file" accept="image/*" capture="environment" className="mt-2 text-sm" onChange={(e) => setAnswer(field.id, e.target.files?.[0]?.name || '')} />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-waves-400 hover:bg-waves-50 transition-colors">
+                <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                <span className="text-xs text-gray-500">التقاط صورة</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setAnswer(field.id, e.target.files?.[0]?.name || '')} />
+              </label>
+              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-waves-400 hover:bg-waves-50 transition-colors">
+                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
+                <span className="text-xs text-gray-500">اختيار من المعرض</span>
+                <input type="file" accept="image/*" className="hidden" multiple={field.fieldType === 'MULTIPLE_IMAGES'} onChange={(e) => { const names = Array.from(e.target.files || []).map(f => f.name).join(', '); setAnswer(field.id, names); }} />
+              </label>
+            </div>
+            {answers[field.id] && <p className="text-xs text-emerald-600 bg-emerald-50 p-2 rounded">✓ {answers[field.id]}</p>}
           </div>
         );
       case 'SIGNATURE':

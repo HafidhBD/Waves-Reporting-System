@@ -77,10 +77,11 @@ model User {
   updatedAt     DateTime  @updatedAt
   lastLoginAt   DateTime?
 
-  projectAccess  UserProjectAccess[]
-  submissions    Submission[]
-  activityLogs   ActivityLog[]
-  createdProjects Project[] @relation("ProjectCreator")
+  projectAccess    UserProjectAccess[]
+  submissions      Submission[]        @relation("Submitter")
+  reviewedSubs     Submission[]        @relation("Reviewer")
+  activityLogs     ActivityLog[]
+  createdProjects  Project[]           @relation("ProjectCreator")
 
   @@map("users")
 }
@@ -242,7 +243,8 @@ model Submission {
 
   formTemplate FormTemplate       @relation(fields: [formTemplateId], references: [id])
   project      Project            @relation(fields: [projectId], references: [id])
-  submittedBy  User               @relation(fields: [submittedById], references: [id])
+  submittedBy  User               @relation("Submitter", fields: [submittedById], references: [id])
+  reviewedBy   User?              @relation("Reviewer", fields: [reviewedById], references: [id])
   answers      SubmissionAnswer[]
   files        SubmissionFile[]
   location     SubmissionLocation?
