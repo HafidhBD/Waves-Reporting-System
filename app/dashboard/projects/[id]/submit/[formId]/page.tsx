@@ -43,6 +43,40 @@ export default function SubmitFormPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [gpsLocation, setGpsLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
+  const [uploadPreviews, setUploadPreviews] = useState<Record<string, string[]>>({});
+
+  const uploadFile = async (file: File): Promise<{ fileUrl: string } | null> => {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (res.ok) return await res.json();
+      toast({ title: 'خطأ', description: 'فشل رفع الملف', variant: 'destructive' });
+      return null;
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء رفع الملف', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const handleImageUpload = async (fieldId: string, files: FileList | null, multiple: boolean) => {
+    if (!files || files.length === 0) return;
+    setUploadingFields(prev => ({ ...prev, [fieldId]: true }));
+    const urls: string[] = [];
+    const previews: string[] = [];
+    for (const file of Array.from(files)) {
+      previews.push(URL.createObjectURL(file));
+      const result = await uploadFile(file);
+      if (result) urls.push(result.fileUrl);
+    }
+    setUploadPreviews(prev => ({ ...prev, [fieldId]: [...(prev[fieldId] || []), ...previews] }));
+    if (urls.length > 0) {
+      const existing = answers[fieldId];
+      setAnswer(fieldId, existing ? `${existing},${urls.join(',')}` : urls.join(','));
+    }
+    setUploadingFields(prev => ({ ...prev, [fieldId]: false }));
+  };
 
   useEffect(() => {
     const fetchForm = async () => {
@@ -184,18 +218,30 @@ export default function SubmitFormPage() {
         return (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-waves-400 hover:bg-waves-50 transition-colors">
+              <label className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-waves-400 hover:bg-waves-50 transition-colors ${uploadingFields[field.id] ? 'opacity-50 pointer-events-none' : ''}`}>
                 <Camera className="w-8 h-8 text-gray-400 mb-2" />
                 <span className="text-xs text-gray-500">التقاط صورة</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setAnswer(field.id, e.target.files?.[0]?.name || '')} />
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e: any) => handleImageUpload(field.id, e.target.files, false)} />
               </label>
-              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-waves-400 hover:bg-waves-50 transition-colors">
+              <label className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-waves-400 hover:bg-waves-50 transition-colors ${uploadingFields[field.id] ? 'opacity-50 pointer-events-none' : ''}`}>
                 <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
                 <span className="text-xs text-gray-500">اختيار من المعرض</span>
-                <input type="file" accept="image/*" className="hidden" multiple={field.fieldType === 'MULTIPLE_IMAGES'} onChange={(e) => { const names = Array.from(e.target.files || []).map(f => f.name).join(', '); setAnswer(field.id, names); }} />
+                <input type="file" accept="image/*" className="hidden" multiple={field.fieldType === 'MULTIPLE_IMAGES'} onChange={(e: any) => handleImageUpload(field.id, e.target.files, field.fieldType === 'MULTIPLE_IMAGES')} />
               </label>
             </div>
-            {answers[field.id] && <p className="text-xs text-emerald-600 bg-emerald-50 p-2 rounded">✓ {answers[field.id]}</p>}
+            {uploadingFields[field.id] && (
+              <div className="flex items-center gap-2 text-xs text-waves-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>جاري رفع الصور...</span>
+              </div>
+            )}
+            {uploadPreviews[field.id] && uploadPreviews[field.id].length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {uploadPreviews[field.id].map((url: string, idx: number) => (
+                  <img key={idx} src={url} alt="" className="w-16 h-16 object-cover rounded-lg border" />
+                ))}
+              </div>
+            )}
           </div>
         );
       case 'SIGNATURE':

@@ -41,7 +41,7 @@ export default function ProjectDetailPage() {
   const [selectedSub, setSelectedSub] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
-  const [reviewing, setUpdating] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
   const fetchProject = async () => {

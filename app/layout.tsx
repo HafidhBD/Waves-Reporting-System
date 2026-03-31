@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   description: 'منصة احترافية لإدارة التقارير الميدانية للفعاليات والتركيبات والتفعيلات',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icon-192x192.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/webappicon.png',
+    apple: '/webappicon.png',
   },
 };
 
