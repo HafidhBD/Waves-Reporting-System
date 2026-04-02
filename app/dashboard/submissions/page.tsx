@@ -261,7 +261,8 @@ export default function SubmissionsPage() {
                           {isImage && answer?.value ? (
                             <div className="flex flex-wrap gap-2">
                               {answer.value.split(',').map((img: string, idx: number) => {
-                                const src = img.trim().startsWith('/') ? img.trim() : `/uploads/${img.trim()}`;
+                                const raw = img.trim();
+                                const src = raw.startsWith('/api/uploads/') ? raw : raw.startsWith('/uploads/') ? `/api/uploads/${raw.replace('/uploads/', '')}` : raw.startsWith('/') ? raw : `/api/uploads/${raw}`;
                                 return (
                                   <div key={idx} className="relative group cursor-pointer" onClick={() => setLightboxImg(src)}>
                                     <img src={src} alt={field.label} className="w-20 h-20 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
@@ -291,7 +292,8 @@ export default function SubmissionsPage() {
                   <div className="flex flex-wrap gap-2">
                     {selectedSub.files.map((file: any) => {
                       const isImg = file.fileType?.startsWith('image/');
-                      const src = file.fileUrl || `/uploads/${file.fileName}`;
+                      const rawSrc = file.fileUrl || `/uploads/${file.fileName}`;
+                      const src = rawSrc.startsWith('/api/uploads/') ? rawSrc : rawSrc.startsWith('/uploads/') ? `/api/uploads/${rawSrc.replace('/uploads/', '')}` : rawSrc;
                       return isImg ? (
                         <div key={file.id} className="relative group cursor-pointer" onClick={() => setLightboxImg(src)}>
                           <img src={src} alt={file.fileName} className="w-20 h-20 object-cover rounded-lg border hover:opacity-80 transition-opacity" />

@@ -120,29 +120,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 pt-4 border-t text-center">
-              <p className="text-xs text-gray-400">حسابات تجريبية</p>
-              <div className="flex flex-wrap gap-2 justify-center mt-2">
-                {[
-                  { label: 'مدير النظام', email: 'superadmin@example.com' },
-                  { label: 'مدير', email: 'admin@example.com' },
-                  { label: 'مدير مشروع', email: 'pm@example.com' },
-                  { label: 'مشرف ميداني', email: 'supervisor@example.com' },
-                ].map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(account.email);
-                      setPassword('password123');
-                    }}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-md transition-colors"
-                  >
-                    {account.label}
-                  </button>
-                ))}
-              </div>
-            </div>
           </CardContent>
         </Card>
 

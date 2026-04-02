@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       fileName,
-      fileUrl: `/uploads/${fileName}`,
+      fileUrl: `/api/uploads/${fileName}`,
       fileType: file.type,
       fileSize: file.size,
     });

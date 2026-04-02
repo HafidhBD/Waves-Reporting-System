@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,6 +66,9 @@ interface FormField {
 export default function FormBuilderPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role;
+  const canManage = ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'].includes(userRole);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -264,10 +268,12 @@ export default function FormBuilderPage() {
           <h1 className="text-2xl font-bold text-gray-900">منشئ النماذج</h1>
           <p className="text-gray-500 text-sm mt-1">إنشاء وإدارة نماذج التقارير للمشروع</p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)} className="bg-waves-600 hover:bg-waves-700">
-          <Plus className="w-4 h-4 ml-2" />
-          نموذج جديد
-        </Button>
+        {canManage && (
+          <Button onClick={() => setShowCreateForm(true)} className="bg-waves-600 hover:bg-waves-700">
+            <Plus className="w-4 h-4 ml-2" />
+            نموذج جديد
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -280,16 +286,18 @@ export default function FormBuilderPage() {
             <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">لا توجد نماذج</h3>
             <p className="text-gray-500 text-sm mb-4">أنشئ نموذجاً مخصصاً جديداً أو فعّل النماذج الافتراضية</p>
-            <Button onClick={() => setShowCreateForm(true)} className="bg-waves-600 hover:bg-waves-700">
-              <Plus className="w-4 h-4 ml-2" />
-              إنشاء نموذج
-            </Button>
+            {canManage && (
+              <Button onClick={() => setShowCreateForm(true)} className="bg-waves-600 hover:bg-waves-700">
+                <Plus className="w-4 h-4 ml-2" />
+                إنشاء نموذج
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {forms.map((form) => (
-            <Card key={form.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => loadFormForEdit(form)}>
+            <Card key={form.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => canManage && loadFormForEdit(form)}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-waves-50 flex items-center justify-center">

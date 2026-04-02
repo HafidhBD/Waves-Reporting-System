@@ -18,7 +18,7 @@ import { getStatusColor, getStatusLabel, getFormTypeLabel, formatDate, formatDat
 import {
   ArrowRight, FileText, Users, MapPin, Calendar,
   ClipboardList, Loader2, FolderKanban, Plus, Settings2,
-  Eye, Trash2, UserPlus, CheckCircle, XCircle, Clock, ZoomIn, X,
+  Eye, Trash2, UserPlus, CheckCircle, XCircle, Clock, ZoomIn, X, Download,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -43,6 +43,7 @@ export default function ProjectDetailPage() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [updating, setUpdating] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [supervisorFilter, setSupervisorFilter] = useState('ALL');
 
   const fetchProject = async () => {
     try {
@@ -188,7 +189,14 @@ export default function ProjectDetailPage() {
           <span>/</span>
           <span>{project.name}</span>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+          {canManage && (
+            <Button variant="outline" size="sm" onClick={() => window.open(`/dashboard/projects/${project.id}/report`, '_blank')}>
+              <Download className="w-4 h-4 ml-1" />تصدير PDF
+            </Button>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3 mt-2">
           <span className="text-sm text-gray-500">{project.clientName}</span>
           <Badge className={getStatusColor(project.status)}>{getStatusLabel(project.status)}</Badge>
@@ -248,17 +256,21 @@ export default function ProjectDetailPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500">{project.formTemplates?.length || 0} نموذج</p>
-              <Link href={`/dashboard/projects/${project.id}/forms`}>
-                <Button size="sm" variant="outline"><Plus className="w-4 h-4 ml-1" />إضافة نموذج</Button>
-              </Link>
+              {canManage && (
+                <Link href={`/dashboard/projects/${project.id}/forms`}>
+                  <Button size="sm" variant="outline"><Plus className="w-4 h-4 ml-1" />إضافة نموذج</Button>
+                </Link>
+              )}
             </div>
             {project.formTemplates?.length === 0 ? (
               <Card><CardContent className="py-12 text-center">
                 <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                 <p className="text-gray-500 mb-3">لا توجد نماذج في هذا المشروع</p>
-                <Link href={`/dashboard/projects/${project.id}/forms`}>
-                  <Button className="bg-waves-600 hover:bg-waves-700"><Plus className="w-4 h-4 ml-1" />إنشاء نموذج</Button>
-                </Link>
+                {canManage && (
+                  <Link href={`/dashboard/projects/${project.id}/forms`}>
+                    <Button className="bg-waves-600 hover:bg-waves-700"><Plus className="w-4 h-4 ml-1" />إنشاء نموذج</Button>
+                  </Link>
+                )}
               </CardContent></Card>
             ) : (
               project.formTemplates?.map((form: any) => (
@@ -299,18 +311,35 @@ export default function ProjectDetailPage() {
         {/* Submissions Tab */}
         <TabsContent value="submissions">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">{submissions.length} تقرير</p>
+            {(() => {
+              const uniqueSupervisors = Array.from(new Map(submissions.map((s: any) => [s.submittedBy?.id, s.submittedBy])).values()).filter(Boolean);
+              const filteredSubs = supervisorFilter === 'ALL' ? submissions : submissions.filter((s: any) => s.submittedBy?.id === supervisorFilter);
+              return (<>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <p className="text-sm text-gray-500">{filteredSubs.length} تقرير</p>
+              {uniqueSupervisors.length > 1 && (
+                <Select value={supervisorFilter} onValueChange={setSupervisorFilter}>
+                  <SelectTrigger className="w-full sm:w-56 h-10">
+                    <SelectValue placeholder="فرز حسب المشرف" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">جميع المشرفين</SelectItem>
+                    {uniqueSupervisors.map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             {subsLoading ? (
               <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-waves-600" /></div>
-            ) : submissions.length === 0 ? (
+            ) : filteredSubs.length === 0 ? (
               <Card><CardContent className="py-12 text-center">
                 <ClipboardList className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                 <p className="text-gray-500">لا توجد تقارير مُرسلة لهذا المشروع بعد</p>
               </CardContent></Card>
             ) : (
-              submissions.map((sub: any) => (
+              filteredSubs.map((sub: any) => (
                 <Card key={sub.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openDetail(sub)}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -337,6 +366,8 @@ export default function ProjectDetailPage() {
                 </Card>
               ))
             )}
+              </>);
+            })()}
           </div>
         </TabsContent>
 
@@ -437,7 +468,8 @@ export default function ProjectDetailPage() {
                           {isImage && answer?.value ? (
                             <div className="flex flex-wrap gap-2">
                               {answer.value.split(',').map((img: string, idx: number) => {
-                                const src = img.trim().startsWith('/') ? img.trim() : `/uploads/${img.trim()}`;
+                                const raw = img.trim();
+                                const src = raw.startsWith('/api/uploads/') ? raw : raw.startsWith('/uploads/') ? `/api/uploads/${raw.replace('/uploads/', '')}` : raw.startsWith('/') ? raw : `/api/uploads/${raw}`;
                                 return (
                                   <div key={idx} className="relative group cursor-pointer" onClick={() => setLightboxImg(src)}>
                                     <img src={src} alt={field.label} className="w-20 h-20 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
@@ -467,7 +499,8 @@ export default function ProjectDetailPage() {
                   <div className="flex flex-wrap gap-2">
                     {selectedSub.files.map((file: any) => {
                       const isImg = file.fileType?.startsWith('image/');
-                      const src = file.fileUrl || `/uploads/${file.fileName}`;
+                      const rawSrc = file.fileUrl || `/uploads/${file.fileName}`;
+                      const src = rawSrc.startsWith('/api/uploads/') ? rawSrc : rawSrc.startsWith('/uploads/') ? `/api/uploads/${rawSrc.replace('/uploads/', '')}` : rawSrc;
                       return isImg ? (
                         <div key={file.id} className="relative group cursor-pointer" onClick={() => setLightboxImg(src)}>
                           <img src={src} alt={file.fileName} className="w-20 h-20 object-cover rounded-lg border hover:opacity-80 transition-opacity" />

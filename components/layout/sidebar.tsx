@@ -26,7 +26,7 @@ const navigation = [
   { name: 'المشاريع', href: '/dashboard/projects', icon: FolderKanban },
   { name: 'التقارير', href: '/dashboard/submissions', icon: ClipboardList },
   { name: 'المستخدمون', href: '/dashboard/users', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { name: 'التحليلات', href: '/dashboard/analytics', icon: BarChart3 },
+  { name: 'التحليلات', href: '/dashboard/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'] },
   { name: 'الإعدادات', href: '/dashboard/settings', icon: Settings, roles: ['SUPER_ADMIN'] },
 ];
 

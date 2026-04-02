@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
 
     const userRole = (session.user as any).role;
     const userId = (session.user as any).id;
-    if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+    if (userRole === 'FIELD_SUPERVISOR') {
+      where.submittedById = userId;
+    } else if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
       where.OR = [
         { submittedById: userId },
         { project: { members: { some: { userId } } } },

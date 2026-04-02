@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,6 +40,9 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role;
+  const canCreate = ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'].includes(userRole);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -102,10 +106,12 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-bold text-gray-900">المشاريع</h1>
           <p className="text-gray-500 text-sm mt-1">إدارة جميع المشاريع والتقارير الميدانية</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="bg-waves-600 hover:bg-waves-700">
-          <Plus className="w-4 h-4 ml-2" />
-          مشروع جديد
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setShowCreate(true)} className="bg-waves-600 hover:bg-waves-700">
+            <Plus className="w-4 h-4 ml-2" />
+            مشروع جديد
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -128,10 +134,12 @@ export default function ProjectsPage() {
             <FolderKanban className="w-16 h-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">لا توجد مشاريع</h3>
             <p className="text-gray-500 text-sm mb-4">ابدأ بإنشاء مشروعك الأول</p>
-            <Button onClick={() => setShowCreate(true)} className="bg-waves-600 hover:bg-waves-700">
-              <Plus className="w-4 h-4 ml-2" />
-              إنشاء مشروع
-            </Button>
+            {canCreate && (
+              <Button onClick={() => setShowCreate(true)} className="bg-waves-600 hover:bg-waves-700">
+                <Plus className="w-4 h-4 ml-2" />
+                إنشاء مشروع
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
