@@ -27,6 +27,7 @@ export default function ProjectDetailPage() {
   const { toast } = useToast();
   const userRole = (session?.user as any)?.role;
   const canManage = ['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'].includes(userRole);
+  const canAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(userRole);
 
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -163,6 +164,43 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const changeProjectStatus = async (status: string) => {
+    const label = status === 'COMPLETED' ? 'إنهاء' : status === 'ACTIVE' ? 'تفعيل' : status === 'ON_HOLD' ? 'تعليق' : 'أرشفة';
+    if (!confirm(`هل تريد ${label} هذا المشروع؟`)) return;
+    try {
+      const res = await fetch(`/api/projects/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        toast({ title: 'تم', description: `تم ${label} المشروع بنجاح` });
+        fetchProject();
+      } else {
+        const err = await res.json();
+        toast({ title: 'خطأ', description: err.error, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ', variant: 'destructive' });
+    }
+  };
+
+  const deleteProject = async () => {
+    if (!confirm('هل أنت متأكد من حذف هذا المشروع؟ \nسيتم حذف جميع النماذج والتقارير المرتبطة به. لا يمكن التراجع عن هذا الإجراء.')) return;
+    try {
+      const res = await fetch(`/api/projects/${params.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'تم', description: 'تم حذف المشروع بنجاح' });
+        window.location.href = '/dashboard/projects';
+      } else {
+        const err = await res.json();
+        toast({ title: 'خطأ', description: err.error, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حذف المشروع', variant: 'destructive' });
+    }
+  };
+
   const deleteSubmission = async () => {
     if (!selectedSub) return;
     if (!confirm('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.')) return;
@@ -212,11 +250,28 @@ export default function ProjectDetailPage() {
         </div>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-          {canManage && (
-            <Button variant="outline" size="sm" onClick={() => window.open(`/dashboard/projects/${project.id}/report`, '_blank')}>
-              <Download className="w-4 h-4 ml-1" />تصدير PDF
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canManage && (
+              <Button variant="outline" size="sm" onClick={() => window.open(`/dashboard/projects/${project.id}/report`, '_blank')}>
+                <Download className="w-4 h-4 ml-1" />تصدير PDF
+              </Button>
+            )}
+            {canAdmin && project.status === 'ACTIVE' && (
+              <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => changeProjectStatus('COMPLETED')}>
+                <CheckCircle className="w-4 h-4 ml-1" />إنهاء المشروع
+              </Button>
+            )}
+            {canAdmin && project.status === 'COMPLETED' && (
+              <Button variant="outline" size="sm" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => changeProjectStatus('ACTIVE')}>
+                <Clock className="w-4 h-4 ml-1" />إعادة تفعيل
+              </Button>
+            )}
+            {canAdmin && (
+              <Button variant="outline" size="sm" className="border-red-300 text-red-600 hover:bg-red-50" onClick={deleteProject}>
+                <Trash2 className="w-4 h-4 ml-1" />حذف
+              </Button>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 mt-2">
           <span className="text-sm text-gray-500">{project.clientName}</span>

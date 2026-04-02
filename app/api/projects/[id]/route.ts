@@ -42,6 +42,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const body = await req.json();
+
+    // Restrict status change to ADMIN/SUPER_ADMIN only
+    if (body.status && !['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية لتغيير حالة المشروع' }, { status: 403 });
+    }
+
     const project = await prisma.project.update({
       where: { id: params.id },
       data: {
@@ -57,9 +63,71 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       },
     });
 
+    const userId = (session.user as any).id;
+    if (body.status) {
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          projectId: project.id,
+          action: 'UPDATE',
+          entity: 'PROJECT',
+          entityId: project.id,
+          details: { status: body.status, projectName: project.name },
+        },
+      });
+    }
+
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error updating project:', error);
     return NextResponse.json({ error: 'حدث خطأ أثناء تحديث المشروع' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+
+    const userRole = (session.user as any).role;
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية لحذف المشروع' }, { status: 403 });
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: params.id },
+      select: { id: true, name: true, _count: { select: { submissions: true } } },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: 'المشروع غير موجود' }, { status: 404 });
+    }
+
+    // Delete related data in order
+    await prisma.submissionLocation.deleteMany({
+      where: { submission: { projectId: params.id } },
+    });
+    await prisma.submissionFile.deleteMany({
+      where: { submission: { projectId: params.id } },
+    });
+    await prisma.submissionAnswer.deleteMany({
+      where: { submission: { projectId: params.id } },
+    });
+    await prisma.submission.deleteMany({ where: { projectId: params.id } });
+    await prisma.formField.deleteMany({
+      where: { section: { formTemplate: { projectId: params.id } } },
+    });
+    await prisma.formSection.deleteMany({
+      where: { formTemplate: { projectId: params.id } },
+    });
+    await prisma.formTemplate.deleteMany({ where: { projectId: params.id } });
+    await prisma.userProjectAccess.deleteMany({ where: { projectId: params.id } });
+    await prisma.activityLog.deleteMany({ where: { projectId: params.id } });
+    await prisma.project.delete({ where: { id: params.id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    return NextResponse.json({ error: 'حدث خطأ أثناء حذف المشروع' }, { status: 500 });
   }
 }
