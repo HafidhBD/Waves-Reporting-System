@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, ClipboardList, Loader2, FileText, MapPin, Eye,
-  CheckCircle, XCircle, Clock, X, ZoomIn, Filter,
+  CheckCircle, XCircle, Clock, X, ZoomIn, Filter, Trash2,
 } from 'lucide-react';
 
 interface Submission {
@@ -108,6 +108,27 @@ export default function SubmissionsPage() {
       }
     } catch {
       toast({ title: 'خطأ', description: 'حدث خطأ', variant: 'destructive' });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const deleteSubmission = async () => {
+    if (!selectedSub) return;
+    if (!confirm('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/submissions/${selectedSub.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'تم', description: 'تم حذف التقرير بنجاح' });
+        setShowDetail(false);
+        fetchSubmissions();
+      } else {
+        const err = await res.json();
+        toast({ title: 'خطأ', description: err.error, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حذف التقرير', variant: 'destructive' });
     } finally {
       setUpdating(false);
     }
@@ -339,6 +360,15 @@ export default function SubmissionsPage() {
               {selectedSub.reviewedBy && (
                 <div className="text-xs text-gray-400 border-t pt-3">
                   تمت المراجعة بواسطة {selectedSub.reviewedBy.name} • {formatDateTime(selectedSub.reviewedAt)}
+                </div>
+              )}
+
+              {canReview && (
+                <div className="border-t pt-4">
+                  <Button onClick={deleteSubmission} disabled={updating} variant="outline" className="w-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700">
+                    {updating ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Trash2 className="w-4 h-4 ml-2" />}
+                    حذف التقرير
+                  </Button>
                 </div>
               )}
             </div>

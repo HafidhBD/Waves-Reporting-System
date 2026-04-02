@@ -93,3 +93,43 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'حدث خطأ أثناء تحديث التقرير' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+
+    const userRole = (session.user as any).role;
+    if (!['SUPER_ADMIN', 'ADMIN', 'PROJECT_MANAGER'].includes(userRole)) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية لحذف التقرير' }, { status: 403 });
+    }
+
+    const submission = await prisma.submission.findUnique({
+      where: { id: params.id },
+      select: { id: true, projectId: true, formTemplate: { select: { name: true } } },
+    });
+
+    if (!submission) {
+      return NextResponse.json({ error: 'التقرير غير موجود' }, { status: 404 });
+    }
+
+    await prisma.submission.delete({ where: { id: params.id } });
+
+    const userId = (session.user as any).id;
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        projectId: submission.projectId,
+        action: 'DELETE',
+        entity: 'SUBMISSION',
+        entityId: submission.id,
+        details: { formName: submission.formTemplate.name },
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting submission:', error);
+    return NextResponse.json({ error: 'حدث خطأ أثناء حذف التقرير' }, { status: 500 });
+  }
+}
