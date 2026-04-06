@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, ClipboardList, Loader2, FileText, MapPin, Eye,
-  CheckCircle, XCircle, Clock, X, ZoomIn, Filter, Trash2,
+  CheckCircle, XCircle, Clock, X, ZoomIn, Filter, Trash2, MessageSquare,
 } from 'lucide-react';
 
 interface Submission {
@@ -358,8 +358,19 @@ export default function SubmissionsPage() {
               )}
 
               {selectedSub.reviewedBy && (
-                <div className="text-xs text-gray-400 border-t pt-3">
-                  تمت المراجعة بواسطة {selectedSub.reviewedBy.name} • {formatDateTime(selectedSub.reviewedAt)}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="text-xs text-gray-400">
+                    تمت المراجعة بواسطة {selectedSub.reviewedBy.name} • {formatDateTime(selectedSub.reviewedAt)}
+                  </div>
+                  {selectedSub.reviewNotes && (
+                    <div className="bg-gray-50 rounded-lg p-3 flex gap-2">
+                      <MessageSquare className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">ملاحظات المراجع</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedSub.reviewNotes}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

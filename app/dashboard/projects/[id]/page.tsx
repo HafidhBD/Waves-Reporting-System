@@ -18,7 +18,7 @@ import { getStatusColor, getStatusLabel, getFormTypeLabel, formatDate, formatDat
 import {
   ArrowRight, FileText, Users, MapPin, Calendar,
   ClipboardList, Loader2, FolderKanban, Plus, Settings2,
-  Eye, Trash2, UserPlus, CheckCircle, XCircle, Clock, ZoomIn, X, Download,
+  Eye, Trash2, UserPlus, CheckCircle, XCircle, Clock, ZoomIn, X, Download, Pencil, MessageSquare,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -45,6 +45,9 @@ export default function ProjectDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [supervisorFilter, setSupervisorFilter] = useState('ALL');
+  const [editingName, setEditingName] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   const fetchProject = async () => {
     try {
@@ -164,6 +167,33 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const saveProjectName = async () => {
+    if (!newProjectName.trim() || newProjectName.trim() === project.name) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    try {
+      const res = await fetch(`/api/projects/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newProjectName.trim() }),
+      });
+      if (res.ok) {
+        toast({ title: 'تم', description: 'تم تحديث اسم المشروع بنجاح' });
+        fetchProject();
+        setEditingName(false);
+      } else {
+        const err = await res.json();
+        toast({ title: 'خطأ', description: err.error, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'حدث خطأ', variant: 'destructive' });
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const changeProjectStatus = async (status: string) => {
     const label = status === 'COMPLETED' ? 'إنهاء' : status === 'ACTIVE' ? 'تفعيل' : status === 'ON_HOLD' ? 'تعليق' : 'أرشفة';
     if (!confirm(`هل تريد ${label} هذا المشروع؟`)) return;
@@ -249,7 +279,33 @@ export default function ProjectDetailPage() {
           <span>{project.name}</span>
         </div>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                className="text-xl font-bold h-10 w-64"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') saveProjectName(); if (e.key === 'Escape') setEditingName(false); }}
+                disabled={savingName}
+              />
+              <Button size="sm" onClick={saveProjectName} disabled={savingName} className="bg-waves-600 hover:bg-waves-700">
+                {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEditingName(false)} disabled={savingName}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+              {canManage && (
+                <button onClick={() => { setNewProjectName(project.name); setEditingName(true); }} className="text-gray-400 hover:text-waves-600 transition-colors" title="تعديل اسم المشروع">
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-2">
             {canManage && (
               <Button variant="outline" size="sm" onClick={() => window.open(`/dashboard/projects/${project.id}/report`, '_blank')}>
@@ -617,8 +673,19 @@ export default function ProjectDetailPage() {
               )}
 
               {selectedSub.reviewedBy && (
-                <div className="text-xs text-gray-400 border-t pt-3">
-                  تمت المراجعة بواسطة {selectedSub.reviewedBy.name} • {formatDateTime(selectedSub.reviewedAt)}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="text-xs text-gray-400">
+                    تمت المراجعة بواسطة {selectedSub.reviewedBy.name} • {formatDateTime(selectedSub.reviewedAt)}
+                  </div>
+                  {selectedSub.reviewNotes && (
+                    <div className="bg-gray-50 rounded-lg p-3 flex gap-2">
+                      <MessageSquare className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">ملاحظات المراجع</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedSub.reviewNotes}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
