@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
+import { fetchFromSynology } from '@/lib/synology-storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,22 +29,42 @@ export async function GET(req: NextRequest, { params }: { params: { path: string
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
     }
 
-    const fullPath = path.join(process.cwd(), 'public', 'uploads', filePath);
-
-    if (!existsSync(fullPath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
-    }
-
-    const buffer = await readFile(fullPath);
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    const fullPath = path.join(uploadDir, filePath);
     const ext = path.extname(fullPath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
-    });
+    // 1) Try local file first
+    if (existsSync(fullPath)) {
+      const buffer = await readFile(fullPath);
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
+    // 2) File not found locally — try fetching from Synology backup
+    const fileName = params.path[params.path.length - 1];
+    const synologyBuffer = await fetchFromSynology(fileName);
+
+    if (synologyBuffer) {
+      // Re-cache locally so next request is fast
+      await mkdir(uploadDir, { recursive: true });
+      writeFile(fullPath, synologyBuffer).catch((err) =>
+        console.error('[Cache] Failed to re-cache file locally:', err)
+      );
+
+      return new NextResponse(synologyBuffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
+    return NextResponse.json({ error: 'File not found' }, { status: 404 });
   } catch (error) {
     console.error('Error serving file:', error);
     return NextResponse.json({ error: 'File not found' }, { status: 404 });

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { uploadToSynology } from '@/lib/synology-storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,11 @@ export async function POST(req: NextRequest) {
     const filePath = path.join(uploadDir, fileName);
 
     await writeFile(filePath, buffer);
+
+    // Backup to Synology NAS (non-blocking)
+    uploadToSynology(fileName, buffer).catch((err) =>
+      console.error('[Synology] Background backup failed:', err)
+    );
 
     return NextResponse.json({
       fileName,
