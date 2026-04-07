@@ -6,7 +6,7 @@
  * redeployments.
  *
  * Required environment variables:
- *   SYNOLOGY_URL       - e.g. https://waveswp.synology.me:5001
+ *   SYNOLOGY_URL       - e.g. https://waveswp.synology.me
  *   SYNOLOGY_USERNAME  - DSM username
  *   SYNOLOGY_PASSWORD  - DSM password
  *   SYNOLOGY_FOLDER    - Shared folder path, e.g. /waves-uploads
