@@ -55,25 +55,60 @@ export async function GET() {
     const password = process.env.SYNOLOGY_PASSWORD || '';
 
     try {
-      const loginParams = new URLSearchParams({
-        api: 'SYNO.API.Auth',
-        version: '6',
-        method: 'login',
-        account: username,
-        passwd: password,
-        session: 'WavesTest',
-        format: 'sid',
-      });
+      // Try multiple auth API versions (some DSM versions only support certain versions)
+      let loginData: any = null;
+      let loginSuccess = false;
+      const authVersions = ['3', '6', '7'];
+      const authEndpoints = ['/webapi/auth.cgi', '/webapi/entry.cgi'];
 
-      const loginRes = await fetch(`${baseUrl}/webapi/auth.cgi?${loginParams}`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(10000),
-      });
-      const loginData = await loginRes.json();
+      for (const endpoint of authEndpoints) {
+        if (loginSuccess) break;
+        for (const ver of authVersions) {
+          if (loginSuccess) break;
+          try {
+            const loginParams = new URLSearchParams({
+              api: 'SYNO.API.Auth',
+              version: ver,
+              method: 'login',
+              account: username,
+              passwd: password,
+              session: 'WavesTest',
+              format: 'sid',
+            });
 
-      if (loginData.success && loginData.data?.sid) {
-        results.steps.push({ step: 'Login', status: 'OK', sid: loginData.data.sid.substring(0, 8) + '...' });
+            const loginRes = await fetch(`${baseUrl}${endpoint}?${loginParams}`, {
+              method: 'GET',
+              signal: AbortSignal.timeout(10000),
+            });
+            loginData = await loginRes.json();
 
+            if (loginData.success && loginData.data?.sid) {
+              loginSuccess = true;
+              results.steps.push({
+                step: 'Login',
+                status: 'OK',
+                sid: loginData.data.sid.substring(0, 8) + '...',
+                workedWith: `${endpoint} v${ver}`,
+              });
+            } else {
+              results.steps.push({
+                step: `Login attempt (${endpoint} v${ver})`,
+                status: 'FAIL',
+                errorCode: loginData.error?.code,
+                message: getAuthErrorMessage(loginData.error?.code),
+              });
+            }
+          } catch (err: any) {
+            results.steps.push({
+              step: `Login attempt (${endpoint} v${ver})`,
+              status: 'FAIL',
+              message: err.message,
+            });
+          }
+        }
+      }
+
+      if (loginSuccess && loginData?.data?.sid) {
         const sid = loginData.data.sid;
         const folder = process.env.SYNOLOGY_FOLDER || '/waves-uploads';
 
@@ -177,10 +212,9 @@ export async function GET() {
 
       } else {
         results.steps.push({
-          step: 'Login',
+          step: 'Login Summary',
           status: 'FAIL',
-          errorCode: loginData.error?.code,
-          message: getAuthErrorMessage(loginData.error?.code),
+          message: 'All login attempts failed. See individual attempts above.',
         });
       }
     } catch (err: any) {
